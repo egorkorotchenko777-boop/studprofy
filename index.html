@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>СтудПрофи — Бонусы</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Nunito:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -681,44 +682,76 @@
 </div>
 
 <script>
-  // ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM =====
-  const tg = window.Telegram.WebApp;
-  tg.expand();
-  tg.setHeaderColor('#0d0f14');
-  tg.setBackgroundColor('#0d0f14');
+ // ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM =====
+const tg = window.Telegram.WebApp;
+tg.expand();
+tg.setHeaderColor('#0d0f14');
+tg.setBackgroundColor('#0d0f14');
 
-  const userId = tg.initDataUnsafe?.user?.id || 'demo';
-  const userName = tg.initDataUnsafe?.user?.first_name || 'Студент';
+const tgUser = tg.initDataUnsafe?.user || null;
+const userId = tgUser?.id || null;
+const userName = tgUser?.first_name || 'Студент';
 
-  // URL ТВОЕГО СЕРВЕРА — замени после деплоя!
-  const SERVER_URL = 'https://studprofy-production.up.railway.app';
-  const SUPABASE_URL = 'https://hmtvzflvnzxhoalshwmt.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz';
-  
-  // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЯ =====
-  let userData = {
-    balance: 0,
-    referrals: 0,
-    orders: 0,
-    saved: 0,
-    refLink: `https://t.me/StudProfyBot?start=${userId}`
-  };
+// ===== ПОДКЛЮЧЕНИЕ BACKEND =====
+const SERVER_URL = 'https://studprofy-production.up.railway.app';
 
+// ===== SUPABASE =====
+const SUPABASE_URL = "https://hmtvzflvnzxhoalshwmt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
   // ===== ЗАГРУЗКА ДАННЫХ =====
-  async function loadUserData() {
-    try {
-      const res = await fetch(`${SERVER_URL}/api/user/${userId}`, {
-        headers: { 'X-Telegram-Init-Data': tg.initData }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        userData = { ...userData, ...data };
-      }
-    } catch (e) {
-      // Если сервер недоступен — показываем демо-данные
-      userData = { balance: 350, referrals: 2, orders: 3, saved: 350, refLink: `https://t.me/StudProfyBot?start=${userId}` };
-    }
+ async function loadUserData() {
+  if (!userId) {
+    userData = {
+      balance: 0,
+      referrals: 0,
+      orders: 0,
+      saved: 0,
+      refLink: 'Недоступно вне Telegram'
+    };
     updateUI();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SERVER_URL}/api/user/${userId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': tg.initData || ''
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error('Не удалось загрузить пользователя');
+    }
+
+    const data = await res.json();
+
+    userData = {
+      balance: data.balance || 0,
+      referrals: data.referrals || 0,
+      orders: data.orders || 0,
+      saved: data.saved || 0,
+      refLink: data.refLink || `https://t.me/StudProfyBonus_bot?start=ref_${userId}`
+    };
+  } catch (e) {
+    console.error('loadUserData error:', e);
+
+    userData = {
+      balance: 0,
+      referrals: 0,
+      orders: 0,
+      saved: 0,
+      refLink: `https://t.me/StudProfyBonus_bot?start=ref_${userId || 'demo'}`
+    };
+  }
+
+  updateUI();
+}
   }
 
   // ===== ОБНОВЛЕНИЕ ИНТЕРФЕЙСА =====
@@ -783,60 +816,113 @@
 
   // ===== ПОТРАТИТЬ — ПОДАРОК =====
   async function spendGift() {
-    if (userData.balance < 1000) {
-      tg.showAlert(`❌ Нужно 1000 бонусов для подарка.\nУ тебя сейчас: ${userData.balance} ★\nЕщё не хватает: ${1000 - userData.balance} ★`);
-      return;
-    }
-    tg.showConfirm('🎁 Списать 1000 бонусов и получить подарок?', async (ok) => {
-      if (ok) {
-        try {
-          await fetch(`${SERVER_URL}/api/spend`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg.initData },
-            body: JSON.stringify({ user_id: userId, amount: 1000, reason: 'gift' })
-          });
-        } catch(e) {}
-        showToast('🎁 Напиши @StudProfy для получения подарка!');
-        userData.balance -= 1000;
-        updateUI();
-      }
-    });
+  if (userData.balance < 1000) {
+    tg.showAlert(`❌ Нужно 1000 бонусов для подарка.\nУ тебя сейчас: ${userData.balance} ★\nЕщё не хватает: ${1000 - userData.balance} ★`);
+    return;
   }
+
+  tg.showConfirm('🎁 Списать 1000 бонусов и получить подарок?', async (ok) => {
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`${SERVER_URL}/api/spend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': tg.initData || ''
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          amount: 1000,
+          reason: 'gift'
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Ошибка списания бонусов');
+      }
+
+      showToast('🎁 Заявка на подарок отправлена!');
+      await loadUserData();
+    } catch (e) {
+      console.error('spendGift error:', e);
+      tg.showAlert('❌ Не удалось списать бонусы');
+    }
+  });
+}
 
   // ===== ОТПРАВИТЬ ЗАКАЗ =====
   async function submitOrder() {
-    const type = document.getElementById('order-type').value;
-    const topic = document.getElementById('order-topic').value;
-    const uni = document.getElementById('order-uni').value;
-    const deadline = document.getElementById('order-deadline').value;
-    const extra = document.getElementById('order-extra').value;
+  const type = document.getElementById('order-type').value;
+  const topic = document.getElementById('order-topic').value.trim();
+  const uni = document.getElementById('order-uni').value.trim();
+  const deadline = document.getElementById('order-deadline').value;
+  const extra = document.getElementById('order-extra').value.trim();
 
-    if (!topic || !uni) {
-      tg.showAlert('❌ Заполни тему и учебное заведение');
-      return;
-    }
-
-    const orderData = { user_id: userId, type, topic, uni, deadline, extra };
-
-    try {
-      await fetch(`${SERVER_URL}/api/order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg.initData },
-        body: JSON.stringify(orderData)
-      });
-    } catch(e) {}
-
-    tg.showAlert('✅ Заказ отправлен!\n\nАдминистратор свяжется с тобой. После подтверждения начислим +100 бонусов!', () => {
-      document.getElementById('order-topic').value = '';
-      document.getElementById('order-uni').value = '';
-      document.getElementById('order-deadline').value = '';
-      document.getElementById('order-extra').value = '';
-      showScreen('home');
-    });
+  if (!topic || !uni) {
+    tg.showAlert('❌ Заполни тему и учебное заведение');
+    return;
   }
 
+  const orderData = {
+    user_id: userId,
+    type,
+    topic,
+    uni,
+    deadline,
+    extra
+  };
+
+  try {
+    const res = await fetch(`${SERVER_URL}/api/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': tg.initData || ''
+      },
+      body: JSON.stringify(orderData)
+    });
+
+    if (!res.ok) {
+      throw new Error('Ошибка при отправке заказа');
+    }
+
+    tg.showAlert(
+      '✅ Заказ отправлен!\n\nМенеджер свяжется с тобой. Бонусы начислятся после подтверждения заказа.',
+      () => {
+        document.getElementById('order-topic').value = '';
+        document.getElementById('order-uni').value = '';
+        document.getElementById('order-deadline').value = '';
+        document.getElementById('order-extra').value = '';
+        showScreen('home');
+        loadUserData();
+      }
+    );
+  } catch (e) {
+    console.error('submitOrder error:', e);
+    tg.showAlert('❌ Не удалось отправить заказ. Проверь сервер.');
+  }
+}
+  
+if (!tg.initDataUnsafe?.user) {
+  console.warn('Приложение открыто не внутри Telegram');
+}
   // ===== СТАРТ =====
-  loadUserData();
+  async function testSupabaseConnection() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('settings')
+      .select('*')
+      .limit(1);
+
+    console.log('Supabase test data:', data);
+    console.log('Supabase test error:', error);
+  } catch (e) {
+    console.error('Supabase connection failed:', e);
+testSupabaseConnection();
+loadUserData();
+  }
+}
 </script>
 </body>
 </html>
