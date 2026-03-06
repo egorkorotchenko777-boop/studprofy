@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>СтудПрофи — Бонусы</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Nunito:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --card: #161a23;
+      --card2: #1e2330;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --gold: #f5c842;
+      --text: #f0f2ff;
+      --muted: #7b82a0;
+      --radius: 18px;
+      --green: #4ade80;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== LOADER ===== */
+    .loader-wrap {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      gap: 16px;
+      transition: opacity 0.4s;
+    }
+    .loader-wrap.hidden { opacity: 0; pointer-events: none; }
+    .loader-logo {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 20px;
+      color: var(--accent);
+    }
+    .loader-logo span { color: var(--accent2); }
+    .loader-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(108,99,255,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== HEADER ===== */
+    .header {
+      padding: 20px 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent2); }
+    .user-name {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* ===== BALANCE CARD ===== */
+    .balance-card {
+      margin: 20px 20px 0;
+      background: linear-gradient(135deg, #1a1060 0%, #2d1b69 50%, #1a0a3d 100%);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(108,99,255,0.3);
+    }
+    .balance-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 150px; height: 150px;
+      background: radial-gradient(circle, rgba(108,99,255,0.4) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .balance-card::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; left: 20px;
+      width: 100px; height: 100px;
+      background: radial-gradient(circle, rgba(255,101,132,0.3) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .balance-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .balance-amount {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+    }
+    .balance-amount span {
+      font-size: 18px;
+      color: var(--gold);
+      margin-left: 6px;
+    }
+    .balance-sub {
+      margin-top: 16px;
+      display: flex;
+      gap: 20px;
+    }
+    .balance-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .balance-stat-val {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .balance-stat-lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+    }
+    .progress-wrap { margin-top: 18px; }
+    .progress-lbl {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+    }
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      transition: width 0.8s ease;
+    }
+
+    /* ===== SECTION TITLE ===== */
+    .section-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 24px 20px 12px;
+    }
+
+    /* ===== ACTION GRID ===== */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 20px;
+    }
+    .action-btn {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn .icon { font-size: 26px; line-height: 1; }
+    .action-btn .btn-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .action-btn .btn-sub { font-size: 11px; color: var(--muted); }
+    .action-btn.accent { background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05)); border-color: rgba(108,99,255,0.3); }
+    .action-btn.red { background: linear-gradient(135deg, rgba(255,101,132,0.2), rgba(255,101,132,0.05)); border-color: rgba(255,101,132,0.3); }
+    .action-btn.gold { background: linear-gradient(135deg, rgba(245,200,66,0.2), rgba(245,200,66,0.05)); border-color: rgba(245,200,66,0.3); }
+    .action-btn.green { background: linear-gradient(135deg, rgba(74,222,128,0.2), rgba(74,222,128,0.05)); border-color: rgba(74,222,128,0.3); }
+
+    /* ===== EARN LIST ===== */
+    .earn-list {
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .earn-item {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .earn-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .earn-text { flex: 1; }
+    .earn-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .earn-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .earn-bonus {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    /* ===== SCREENS ===== */
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== BOTTOM NAV ===== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(13,15,20,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      padding: 10px 0 20px;
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 6px 0;
+      transition: all 0.2s;
+    }
+    .nav-item .nav-icon { font-size: 22px; filter: grayscale(1) opacity(0.5); transition: all 0.2s; }
+    .nav-item .nav-label { font-size: 10px; color: var(--muted); font-weight: 600; transition: all 0.2s; }
+    .nav-item.active .nav-icon { filter: none; }
+    .nav-item.active .nav-label { color: var(--accent); }
+
+    /* ===== REFERRAL ===== */
+    .ref-card {
+      margin: 20px 20px 0;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .ref-card h3 {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .ref-link-box {
+      background: var(--bg);
+      border: 1px solid rgba(108,99,255,0.4);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .copy-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #9c63ff);
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      color: white;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .copy-btn:active { opacity: 0.8; }
+    .ref-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 16px 20px 0;
+    }
+    .ref-stat-card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 16px 12px;
+      text-align: center;
+    }
+    .ref-stat-num {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .ref-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    /* ===== SPEND ===== */
+    .spend-options {
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .spend-card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .spend-card:active { transform: scale(0.98); }
+    .spend-icon { font-size: 36px; }
+    .spend-info { flex: 1; }
+    .spend-title { font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .spend-desc { font-size: 12px; color: var(--muted); }
+    .spend-cost { font-family: 'Unbounded', sans-serif; font-size: 13px; color: var(--gold); font-weight: 700; }
+
+    /* ===== ORDER FORM ===== */
+    .order-form { padding: 0 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-input, .form-textarea {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus, .form-textarea:focus { border-color: rgba(108,99,255,0.5); }
+    .form-textarea { min-height: 100px; resize: none; }
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #9c63ff);
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      color: white;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+    .submit-btn:active { opacity: 0.8; }
+    .submit-btn:disabled { opacity: 0.5; }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background: var(--green);
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .spacer { height: 100px; }
+  </style>
+</head>
+<body>
+
+<!-- ЗАГРУЗЧИК -->
+<div class="loader-wrap" id="loader">
+  <div class="loader-logo">Студ<span>Профи</span></div>
+  <div class="loader-spinner"></div>
+</div>
+
+<div class="toast" id="toast">✅ Скопировано!</div>
+
+<!-- ===== ГЛАВНАЯ ===== -->
+<div class="screen active" id="screen-home">
+  <div class="header">
+    <div class="logo">Студ<span>Профи</span></div>
+    <div class="user-name" id="user-name">Загрузка...</div>
+  </div>
+  <div class="balance-card">
+    <div class="balance-label">Твои бонусы</div>
+    <div class="balance-amount" id="balance-display">0 <span>★</span></div>
+    <div class="balance-sub">
+      <div class="balance-stat">
+        <div class="balance-stat-val" id="stat-referrals">0</div>
+        <div class="balance-stat-lbl">Друзей</div>
+      </div>
+      <div class="balance-stat">
+        <div class="balance-stat-val" id="stat-orders">0</div>
+        <div class="balance-stat-lbl">Заказов</div>
+      </div>
+      <div class="balance-stat">
+        <div class="balance-stat-val" id="stat-saved">0₽</div>
+        <div class="balance-stat-lbl">Сэкономлено</div>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-lbl">
+        <span>До подарка 🎁</span>
+        <span id="progress-text">0 / 1000</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-title">Действия</div>
+  <div class="action-grid">
+    <div class="action-btn accent" onclick="showScreen('referral')">
+      <div class="icon">👥</div>
+      <div class="btn-title">Пригласить друга</div>
+      <div class="btn-sub">+150 бонусов</div>
+    </div>
+    <div class="action-btn green" onclick="showScreen('order')">
+      <div class="icon">📦</div>
+      <div class="btn-title">Новый заказ</div>
+      <div class="btn-sub">+100 бонусов</div>
+    </div>
+    <div class="action-btn gold" onclick="showScreen('spend')">
+      <div class="icon">💳</div>
+      <div class="btn-title">Потратить бонусы</div>
+      <div class="btn-sub">Скидка или подарок</div>
+    </div>
+    <div class="action-btn red" onclick="showScreen('earn')">
+      <div class="icon">⭐</div>
+      <div class="btn-title">Как заработать</div>
+      <div class="btn-sub">Все способы</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ===== РЕФЕРАЛЫ ===== -->
+<div class="screen" id="screen-referral">
+  <div class="header">
+    <div class="logo">Студ<span>Профи</span></div>
+    <div class="user-name">Рефералы</div>
+  </div>
+  <div class="ref-card">
+    <h3>🔗 Твоя реферальная ссылка</h3>
+    <div class="ref-link-box" id="ref-link-display">Загрузка...</div>
+    <button class="copy-btn" onclick="copyRefLink()">📋 Скопировать и поделиться</button>
+  </div>
+  <div class="ref-stats">
+    <div class="ref-stat-card">
+      <div class="ref-stat-num" id="ref-count">0</div>
+      <div class="ref-stat-lbl">Друзей</div>
+    </div>
+    <div class="ref-stat-card">
+      <div class="ref-stat-num" style="color: var(--gold)" id="ref-earned">0</div>
+      <div class="ref-stat-lbl">Заработано ★</div>
+    </div>
+    <div class="ref-stat-card">
+      <div class="ref-stat-num" style="color: var(--green)" id="ref-orders">0</div>
+      <div class="ref-stat-lbl">Заказов</div>
+    </div>
+  </div>
+  <div class="section-title">Как работает</div>
+  <div class="earn-list">
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(108,99,255,0.2)">👋</div>
+      <div class="earn-text">
+        <div class="earn-title">Друг регистрируется</div>
+        <div class="earn-desc">Переходит по твоей ссылке</div>
+      </div>
+      <div class="earn-bonus">+150 ★</div>
+    </div>
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(74,222,128,0.2)">📦</div>
+      <div class="earn-text">
+        <div class="earn-title">Друг делает заказ</div>
+        <div class="earn-desc">После подтверждения заказа</div>
+      </div>
+      <div class="earn-bonus">+300 ★</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ===== КАК ЗАРАБОТАТЬ ===== -->
+<div class="screen" id="screen-earn">
+  <div class="header">
+    <div class="logo">Студ<span>Профи</span></div>
+    <div class="user-name">Как заработать</div>
+  </div>
+  <div class="section-title">Все способы</div>
+  <div class="earn-list">
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(108,99,255,0.2)">📢</div>
+      <div class="earn-text">
+        <div class="earn-title">Подписка на канал</div>
+        <div class="earn-desc">Разово при первом входе</div>
+      </div>
+      <div class="earn-bonus">+50 ★</div>
+    </div>
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(74,222,128,0.2)">📦</div>
+      <div class="earn-text">
+        <div class="earn-title">Свой заказ</div>
+        <div class="earn-desc">После подтверждения</div>
+      </div>
+      <div class="earn-bonus">+100 ★</div>
+    </div>
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(255,101,132,0.2)">👥</div>
+      <div class="earn-text">
+        <div class="earn-title">Приглашение друга</div>
+        <div class="earn-desc">Когда друг зарегистрируется</div>
+      </div>
+      <div class="earn-bonus">+150 ★</div>
+    </div>
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(245,200,66,0.2)">🏆</div>
+      <div class="earn-text">
+        <div class="earn-title">Заказ приглашённого</div>
+        <div class="earn-desc">Когда друг оформит заказ</div>
+      </div>
+      <div class="earn-bonus">+300 ★</div>
+    </div>
+  </div>
+  <div class="section-title">Как потратить</div>
+  <div class="earn-list">
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(108,99,255,0.2)">💸</div>
+      <div class="earn-text">
+        <div class="earn-title">Скидка на заказ</div>
+        <div class="earn-desc">1 бонус = 1 рубль скидки</div>
+      </div>
+      <div class="earn-bonus">от 100 ★</div>
+    </div>
+    <div class="earn-item">
+      <div class="earn-icon" style="background: rgba(245,200,66,0.2)">🎁</div>
+      <div class="earn-text">
+        <div class="earn-title">Подарок / мерч</div>
+        <div class="earn-desc">При накоплении 1000 бонусов</div>
+      </div>
+      <div class="earn-bonus">1000 ★</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ===== ПОТРАТИТЬ ===== -->
+<div class="screen" id="screen-spend">
+  <div class="header">
+    <div class="logo">Студ<span>Профи</span></div>
+    <div class="user-name">Потратить бонусы</div>
+  </div>
+  <div class="section-title">Твой баланс: <span id="spend-balance" style="color: var(--gold)">0 ★</span></div>
+  <div class="spend-options">
+    <div class="spend-card" onclick="spendDiscount()">
+      <div class="spend-icon">💸</div>
+      <div class="spend-info">
+        <div class="spend-title">Скидка на заказ</div>
+        <div class="spend-desc">1 бонус = 1 рубль скидки</div>
+      </div>
+      <div class="spend-cost">от 100 ★</div>
+    </div>
+    <div class="spend-card" onclick="spendGift()">
+      <div class="spend-icon">🎁</div>
+      <div class="spend-info">
+        <div class="spend-title">Получить подарок</div>
+        <div class="spend-desc">Мерч от СтудПрофи</div>
+      </div>
+      <div class="spend-cost">1000 ★</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ===== ЗАКАЗ ===== -->
+<div class="screen" id="screen-order">
+  <div class="header">
+    <div class="logo">Студ<span>Профи</span></div>
+    <div class="user-name">Новый заказ</div>
+  </div>
+  <div class="section-title">Заполни форму</div>
+  <div class="order-form">
+    <div class="form-group">
+      <label class="form-label">Тип работы</label>
+      <select class="form-input" id="order-type">
+        <option>Доклад — от 1000 ₽</option>
+        <option>Реферат — от 1500 ₽</option>
+        <option>Проектная работа — от 2500 ₽</option>
+        <option>Курсовая работа — от 6000 ₽</option>
+        <option>Дипломная работа — от 12000 ₽</option>
+        <option>Отчёт по практике — от 4500 ₽</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Тема работы</label>
+      <input class="form-input" id="order-topic" type="text" placeholder="Например: Маркетинговый анализ рынка..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Учебное заведение и группа</label>
+      <input class="form-input" id="order-uni" type="text" placeholder="МГУ, группа 301" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Дедлайн</label>
+      <input class="form-input" id="order-deadline" type="date" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Дополнительные требования</label>
+      <textarea class="form-textarea" id="order-extra" placeholder="Объём, стиль оформления, особые требования..."></textarea>
+    </div>
+    <button class="submit-btn" id="submit-btn" onclick="submitOrder()">📦 Отправить заказ (+100 бонусов)</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ===== BOTTOM NAV ===== -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="showScreen('home')">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Главная</div>
+  </div>
+  <div class="nav-item" id="nav-referral" onclick="showScreen('referral')">
+    <div class="nav-icon">👥</div>
+    <div class="nav-label">Рефералы</div>
+  </div>
+  <div class="nav-item" id="nav-spend" onclick="showScreen('spend')">
+    <div class="nav-icon">💳</div>
+    <div class="nav-label">Бонусы</div>
+  </div>
+  <div class="nav-item" id="nav-order" onclick="showScreen('order')">
+    <div class="nav-icon">📦</div>
+    <div class="nav-label">Заказ</div>
+  </div>
+</div>
+
+<script>
+  // ==============================
+  // ⚙️ НАСТРОЙКИ — МЕНЯЙ ЗДЕСЬ
+  // ==============================
+  const SERVER_URL = 'https://studprofy-production.up.railway.app';
+  const SUPABASE_URL = 'https://hmtvzflvnzxhoalshwmt.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz';
+  const BOT_USERNAME = 'StudProfyBonus_bot';
+  // ==============================
+
+  // ===== TELEGRAM =====
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  tg.setHeaderColor('#0d0f14');
+  tg.setBackgroundColor('#0d0f14');
+
+  const tgUser = tg.initDataUnsafe?.user || null;
+  const userId = tgUser?.id || null;
+  const userName = tgUser?.first_name || 'Студент';
+
+  // ===== SUPABASE =====
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ===== ДАННЫЕ =====
+  let userData = {
+    balance: 0, referrals: 0, orders: 0, saved: 0, refLink: ''
+  };
+
+  // ===== ЗАГРУЗКА ДАННЫХ =====
+  async function loadUserData() {
+    try {
+      const res = await fetch(`${SERVER_URL}/api/user/${userId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': tg.initData || ''
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        userData = {
+          balance: data.balance || 0,
+          referrals: data.referrals || 0,
+          orders: data.orders || 0,
+          saved: data.saved || 0,
+          refLink: data.refLink || `https://t.me/${BOT_USERNAME}?start=ref_${userId}`
+        };
+      } else {
+        throw new Error('Server error');
+      }
+    } catch (e) {
+      // Если сервер недоступен — нули
+      userData = {
+        balance: 0, referrals: 0, orders: 0, saved: 0,
+        refLink: `https://t.me/${BOT_USERNAME}?start=ref_${userId || 'demo'}`
+      };
+    }
+    updateUI();
+    hideLoader();
+  }
+
+  // ===== ОБНОВЛЕНИЕ UI =====
+  function updateUI() {
+    document.getElementById('user-name').textContent = userName;
+    document.getElementById('balance-display').innerHTML = userData.balance + ' <span>★</span>';
+    document.getElementById('stat-referrals').textContent = userData.referrals;
+    document.getElementById('stat-orders').textContent = userData.orders;
+    document.getElementById('stat-saved').textContent = userData.saved + '₽';
+    document.getElementById('spend-balance').textContent = userData.balance + ' ★';
+
+    const progress = Math.min((userData.balance / 1000) * 100, 100);
+    document.getElementById('progress-fill').style.width = progress + '%';
+    document.getElementById('progress-text').textContent = Math.min(userData.balance, 1000) + ' / 1000';
+
+    document.getElementById('ref-link-display').textContent = userData.refLink;
+    document.getElementById('ref-count').textContent = userData.referrals;
+    document.getElementById('ref-earned').textContent = userData.referrals * 150;
+    document.getElementById('ref-orders').textContent = userData.orders;
+  }
+
+  // ===== СКРЫТЬ ЛОАДЕР =====
+  function hideLoader() {
+    const loader = document.getElementById('loader');
+    loader.classList.add('hidden');
+    setTimeout(() => loader.style.display = 'none', 400);
+  }
+
+  // ===== НАВИГАЦИЯ =====
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    const navEl = document.getElementById('nav-' + name);
+    if (navEl) navEl.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // ===== КОПИРОВАТЬ ССЫЛКУ =====
+  function copyRefLink() {
+    const link = userData.refLink;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).catch(() => {});
+    }
+    showToast('✅ Ссылка скопирована!');
+    try {
+      tg.openTelegramLink(
+        'https://t.me/share/url?url=' + encodeURIComponent(link) +
+        '&text=' + encodeURIComponent('Привет! Закажи учебную работу в СтудПрофи по моей ссылке 🎓')
+      );
+    } catch(e) {}
+  }
+
+  // ===== ТОСТ =====
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ===== СКИДКА =====
+  function spendDiscount() {
+    if (userData.balance < 100) {
+      tg.showAlert('❌ Нужно минимум 100 бонусов для скидки.\nУ тебя: ' + userData.balance + ' ★');
+      return;
+    }
+    tg.showConfirm(
+      'Использовать бонусы как скидку?\n\nТвой баланс: ' + userData.balance + ' ★\n\nСкажи менеджеру сколько списать при оформлении заказа.',
+      (ok) => {
+        if (ok) {
+          showToast('✅ Напиши @StudProfy и назови сумму!');
+          showScreen('order');
+        }
+      }
+    );
+  }
+
+  // ===== ПОДАРОК =====
+  async function spendGift() {
+    if (userData.balance < 1000) {
+      tg.showAlert('❌ Нужно 1000 бонусов.\nУ тебя: ' + userData.balance + ' ★\nЕщё нужно: ' + (1000 - userData.balance) + ' ★');
+      return;
+    }
+    tg.showConfirm('🎁 Списать 1000 бонусов и получить подарок?', async (ok) => {
+      if (!ok) return;
+      try {
+        const res = await fetch(`${SERVER_URL}/api/spend`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Telegram-Init-Data': tg.initData || ''
+          },
+          body: JSON.stringify({ user_id: userId, amount: 1000, reason: 'gift' })
+        });
+        if (!res.ok) throw new Error();
+        showToast('🎁 Заявка отправлена!');
+        await loadUserData();
+      } catch (e) {
+        tg.showAlert('❌ Не удалось списать бонусы. Попробуй позже.');
+      }
+    });
+  }
+
+  // ===== ОТПРАВИТЬ ЗАКАЗ =====
+  async function submitOrder() {
+    const topic = document.getElementById('order-topic').value.trim();
+    const uni = document.getElementById('order-uni').value.trim();
+
+    if (!topic || !uni) {
+      tg.showAlert('❌ Заполни тему и учебное заведение');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Отправляем...';
+
+    const orderData = {
+      user_id: userId,
+      type: document.getElementById('order-type').value,
+      topic,
+      uni,
+      deadline: document.getElementById('order-deadline').value,
+      extra: document.getElementById('order-extra').value.trim()
+    };
+
+    try {
+      const res = await fetch(`${SERVER_URL}/api/order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': tg.initData || ''
+        },
+        body: JSON.stringify(orderData)
+      });
+      if (!res.ok) throw new Error();
+
+      tg.showAlert('✅ Заказ отправлен!\n\nМенеджер свяжется с тобой. Бонусы начислятся после подтверждения.', () => {
+        document.getElementById('order-topic').value = '';
+        document.getElementById('order-uni').value = '';
+        document.getElementById('order-deadline').value = '';
+        document.getElementById('order-extra').value = '';
+        showScreen('home');
+        loadUserData();
+      });
+    } catch (e) {
+      tg.showAlert('❌ Не удалось отправить заказ. Напиши нам напрямую: @StudProfy');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📦 Отправить заказ (+100 бонусов)';
+    }
+  }
+
+  // ===== СТАРТ =====
+  loadUserData();
+</script>
+</body>
+</html>
