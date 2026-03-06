@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>СтудПрофи — Бонусы</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Nunito:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --card: #161a23;
+      --card2: #1e2330;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --gold: #f5c842;
+      --text: #f0f2ff;
+      --muted: #7b82a0;
+      --radius: 18px;
+      --green: #4ade80;
+      --red: #fb7185;
+      --border: rgba(255,255,255,0.08);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .hidden { display: none !important; }
+    .spacer { height: 110px; }
+
+    .header {
+      padding: 20px 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .logo {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: var(--accent2); }
+
+    .user-name {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .balance-card {
+      margin: 20px 20px 0;
+      background: linear-gradient(135deg, #1a1060 0%, #2d1b69 50%, #1a0a3d 100%);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(108,99,255,0.3);
+    }
+
+    .balance-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 150px; height: 150px;
+      background: radial-gradient(circle, rgba(108,99,255,0.4) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .balance-card::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; left: 20px;
+      width: 100px; height: 100px;
+      background: radial-gradient(circle, rgba(255,101,132,0.3) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .balance-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .balance-amount {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .balance-amount span {
+      font-size: 18px;
+      color: var(--gold);
+      margin-left: 6px;
+    }
+
+    .balance-sub {
+      margin-top: 16px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .balance-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 70px;
+    }
+
+    .balance-stat-val {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .balance-stat-lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .progress-wrap { margin-top: 18px; }
+
+    .progress-lbl {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      transition: width 0.8s ease;
+    }
+
+    .section-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 24px 20px 12px;
+    }
+
+    .subsection-note {
+      margin: 0 20px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 20px;
+    }
+
+    .action-btn {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-btn:active,
+    .spend-card:active,
+    .copy-btn:active,
+    .submit-btn:active,
+    .ghost-btn:active,
+    .history-item:active { transform: scale(0.98); }
+
+    .action-btn .icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .action-btn .btn-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .action-btn .btn-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .action-btn.accent { background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05)); border-color: rgba(108,99,255,0.3); }
+    .action-btn.red { background: linear-gradient(135deg, rgba(255,101,132,0.2), rgba(255,101,132,0.05)); border-color: rgba(255,101,132,0.3); }
+    .action-btn.gold { background: linear-gradient(135deg, rgba(245,200,66,0.2), rgba(245,200,66,0.05)); border-color: rgba(245,200,66,0.3); }
+    .action-btn.green { background: linear-gradient(135deg, rgba(74,222,128,0.2), rgba(74,222,128,0.05)); border-color: rgba(74,222,128,0.3); }
+
+    .earn-list,
+    .history-list {
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .earn-item,
+    .history-item,
+    .status-card,
+    .auth-card,
+    .empty-card,
+    .note-card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .earn-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .earn-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .earn-text { flex: 1; }
+    .earn-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .earn-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .earn-bonus,
+    .history-amount {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .history-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .history-desc,
+    .history-date,
+    .status-subtitle,
+    .small-text,
+    .auth-text,
+    .empty-text {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .history-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-date { white-space: nowrap; }
+    .history-amount.minus { color: var(--red); }
+    .history-amount.plus { color: var(--green); }
+
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(13,15,20,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      padding: 10px 0 20px;
+      z-index: 100;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 6px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-item .nav-icon { font-size: 22px; filter: grayscale(1) opacity(0.5); transition: all 0.2s; }
+    .nav-item .nav-label { font-size: 10px; color: var(--muted); font-weight: 600; transition: all 0.2s; }
+    .nav-item.active .nav-icon { filter: none; }
+    .nav-item.active .nav-label { color: var(--accent); }
+
+    .ref-card {
+      margin: 20px 20px 0;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .ref-card h3 {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .ref-link-box {
+      background: var(--bg);
+      border: 1px solid rgba(108,99,255,0.4);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .copy-btn,
+    .submit-btn,
+    .ghost-btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      color: white;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .copy-btn,
+    .submit-btn {
+      background: linear-gradient(135deg, var(--accent), #9c63ff);
+    }
+
+    .ghost-btn {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .copy-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .ref-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 16px 20px 0;
+    }
+
+    .ref-stat-card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 16px 12px;
+      text-align: center;
+    }
+
+    .ref-stat-num {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .ref-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    .spend-options {
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .spend-card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .spend-icon { font-size: 36px; }
+    .spend-info { flex: 1; }
+    .spend-title { font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .spend-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .spend-cost { font-family: 'Unbounded', sans-serif; font-size: 13px; color: var(--gold); font-weight: 700; }
+
+    .order-form { padding: 0 20px; }
+    .form-group { margin-bottom: 14px; }
+
+    .form-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      border-color: rgba(108,99,255,0.5);
+    }
+
+    .form-textarea { min-height: 100px; resize: none; }
+
+    .form-hint {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .status-card,
+    .auth-card,
+    .empty-card,
+    .note-card {
+      margin: 20px;
+    }
+
+    .status-title,
+    .auth-title,
+    .empty-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .note-card {
+      border: 1px solid rgba(108,99,255,0.25);
+      background: linear-gradient(135deg, rgba(108,99,255,0.12), rgba(108,99,255,0.04));
+    }
+
+    .note-card strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background: var(--green);
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.3s ease;
+      max-width: calc(100vw - 24px);
+      text-align: center;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .loader {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 380px) {
+      .action-grid { grid-template-columns: 1fr; }
+      .ref-stats { grid-template-columns: 1fr 1fr; }
+      .copy-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast">Готово</div>
+
+  <div id="boot-status" class="auth-card">
+    <div class="auth-title"><span class="loader"></span>Подключаем СтудПрофи</div>
+    <div class="auth-text" id="boot-text">Проверяем Telegram Mini App, авторизуем пользователя и загружаем данные.</div>
+  </div>
+
+  <div id="app-root" class="hidden">
+    <div class="screen active" id="screen-home">
+      <div class="header">
+        <div class="logo">Студ<span>Профи</span></div>
+        <div class="user-name" id="user-name">Загрузка...</div>
+      </div>
+
+      <div class="balance-card">
+        <div class="balance-label">Твои бонусы</div>
+        <div class="balance-amount" id="balance-display">0 <span>★</span></div>
+        <div class="balance-sub">
+          <div class="balance-stat">
+            <div class="balance-stat-val" id="stat-referrals">0</div>
+            <div class="balance-stat-lbl">Друзей</div>
+          </div>
+          <div class="balance-stat">
+            <div class="balance-stat-val" id="stat-orders">0</div>
+            <div class="balance-stat-lbl">Заказов</div>
+          </div>
+          <div class="balance-stat">
+            <div class="balance-stat-val" id="stat-saved">0₽</div>
+            <div class="balance-stat-lbl">Сэкономлено</div>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-lbl">
+            <span>До подарка 🎁</span>
+            <span id="progress-text">0 / 1000</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Действия</div>
+      <div class="action-grid">
+        <div class="action-btn accent" onclick="showScreen('referral')">
+          <div class="icon">👥</div>
+          <div class="btn-title">Пригласить друга</div>
+          <div class="btn-sub">+150 бонусов за регистрацию</div>
+        </div>
+        <div class="action-btn green" onclick="showScreen('order')">
+          <div class="icon">📦</div>
+          <div class="btn-title">Новый заказ</div>
+          <div class="btn-sub">+100 после подтверждения</div>
+        </div>
+        <div class="action-btn gold" onclick="showScreen('spend')">
+          <div class="icon">💳</div>
+          <div class="btn-title">Потратить бонусы</div>
+          <div class="btn-sub">Скидка или подарок</div>
+        </div>
+        <div class="action-btn red" onclick="showScreen('history')">
+          <div class="icon">⭐</div>
+          <div class="btn-title">История бонусов</div>
+          <div class="btn-sub">Все начисления и списания</div>
+        </div>
+      </div>
+
+      <div class="section-title">Статус</div>
+      <div class="status-card">
+        <div class="status-title" id="home-status-title">Система подключена</div>
+        <div class="status-subtitle" id="home-status-text">Mini App авторизован через Telegram и работает с backend API.</div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <div class="screen" id="screen-referral">
+      <div class="header">
+        <div class="logo">Студ<span>Профи</span></div>
+        <div class="user-name">Рефералы</div>
+      </div>
+
+      <div class="ref-card">
+        <h3>🔗 Твоя реферальная ссылка</h3>
+        <div class="ref-link-box" id="ref-link-display">Загрузка...</div>
+        <div class="copy-actions">
+          <button class="copy-btn" onclick="copyRefLink()">📋 Скопировать ссылку</button>
+          <button class="ghost-btn" onclick="shareRefLink()">🚀 Поделиться</button>
+        </div>
+      </div>
+
+      <div class="ref-stats">
+        <div class="ref-stat-card">
+          <div class="ref-stat-num" id="ref-count">0</div>
+          <div class="ref-stat-lbl">Друзей</div>
+        </div>
+        <div class="ref-stat-card">
+          <div class="ref-stat-num" style="color: var(--gold)" id="ref-earned">0</div>
+          <div class="ref-stat-lbl">Заработано ★</div>
+        </div>
+        <div class="ref-stat-card">
+          <div class="ref-stat-num" style="color: var(--green)" id="ref-orders">0</div>
+          <div class="ref-stat-lbl">Заказов друзей</div>
+        </div>
+      </div>
+
+      <div class="section-title">Как работает</div>
+      <div class="earn-list">
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(108,99,255,0.2)">👋</div>
+          <div class="earn-text">
+            <div class="earn-title">Друг регистрируется</div>
+            <div class="earn-desc">Заходит по твоей ссылке и впервые авторизуется в Mini App</div>
+          </div>
+          <div class="earn-bonus">+150 ★</div>
+        </div>
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(74,222,128,0.2)">📦</div>
+          <div class="earn-text">
+            <div class="earn-title">Друг делает заказ</div>
+            <div class="earn-desc">Начисление происходит только после подтверждения заказа менеджером</div>
+          </div>
+          <div class="earn-bonus">+300 ★</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <div class="screen" id="screen-history">
+      <div class="header">
+        <div class="logo">Студ<span>Профи</span></div>
+        <div class="user-name">История бонусов</div>
+      </div>
+
+      <div class="section-title">Последние операции</div>
+      <div class="history-list" id="history-list"></div>
+      <div class="empty-card hidden" id="history-empty">
+        <div class="empty-title">Пока операций нет</div>
+        <div class="empty-text">Когда появятся бонусы, списания или реферальные начисления, они будут показаны здесь.</div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <div class="screen" id="screen-spend">
+      <div class="header">
+        <div class="logo">Студ<span>Профи</span></div>
+        <div class="user-name">Потратить бонусы</div>
+      </div>
+
+      <div class="section-title">Твой баланс: <span id="spend-balance" style="color: var(--gold)">0 ★</span></div>
+      <div class="subsection-note">Списание делается через backend, поэтому бонусы нельзя накрутить или списать дважды.</div>
+
+      <div class="spend-options">
+        <div class="spend-card" onclick="spendDiscount()">
+          <div class="spend-icon">💸</div>
+          <div class="spend-info">
+            <div class="spend-title">Скидка на заказ</div>
+            <div class="spend-desc">1 бонус = 1 рубль скидки. Минимум 100 ★. Списание делается через API.</div>
+          </div>
+          <div class="spend-cost">от 100 ★</div>
+        </div>
+        <div class="spend-card" onclick="spendGift()">
+          <div class="spend-icon">🎁</div>
+          <div class="spend-info">
+            <div class="spend-title">Получить подарок</div>
+            <div class="spend-desc">Списывается 1000 ★, после чего менеджер связывается с тобой для выдачи мерча.</div>
+          </div>
+          <div class="spend-cost">1000 ★</div>
+        </div>
+      </div>
+
+      <div class="note-card">
+        <strong>Нужные backend endpoints</strong>
+        <div class="small-text">POST /bonuses/redeem — для скидки и подарка. Сейчас фронт уже готов работать именно с этим API.</div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <div class="screen" id="screen-order">
+      <div class="header">
+        <div class="logo">Студ<span>Профи</span></div>
+        <div class="user-name">Новый заказ</div>
+      </div>
+
+      <div class="section-title">Заполни форму</div>
+      <div class="order-form">
+        <div class="form-group">
+          <label class="form-label">Тип работы</label>
+          <select class="form-input" id="order-type">
+            <option value="Доклад">Доклад — от 1000 ₽</option>
+            <option value="Реферат">Реферат — от 1500 ₽</option>
+            <option value="Проектная работа">Проектная работа — от 2500 ₽</option>
+            <option value="Курсовая работа">Курсовая работа — от 6000 ₽</option>
+            <option value="Дипломная работа">Дипломная работа — от 12000 ₽</option>
+            <option value="Отчёт по практике">Отчёт по практике — от 4500 ₽</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Тема работы</label>
+          <input class="form-input" id="order-topic" type="text" placeholder="Например: Маркетинговый анализ рынка" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Учебное заведение и группа</label>
+          <input class="form-input" id="order-uni" type="text" placeholder="Например: МГУ, группа 301" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дедлайн</label>
+          <input class="form-input" id="order-deadline" type="date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дополнительные требования</label>
+          <textarea class="form-textarea" id="order-extra" placeholder="Объём, антиплагиат, методичка, оформление, особые пожелания"></textarea>
+          <div class="form-hint">После отправки заказа менеджер увидит заявку в боте. +100 ★ начисляются после подтверждения заказа, а не сразу.</div>
+        </div>
+        <button class="submit-btn" id="submit-order-btn" onclick="submitOrder()">📦 Отправить заказ</button>
+      </div>
+
+      <div class="note-card">
+        <strong>Нужный backend endpoint</strong>
+        <div class="small-text">POST /orders с Bearer token и телом: type, topic, university, deadline, requirements.</div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <div class="screen" id="screen-earn">
+      <div class="header">
+        <div class="logo">Студ<span>Профи</span></div>
+        <div class="user-name">Как заработать</div>
+      </div>
+
+      <div class="section-title">Все способы</div>
+      <div class="earn-list">
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(108,99,255,0.2)">📢</div>
+          <div class="earn-text">
+            <div class="earn-title">Подписка на канал</div>
+            <div class="earn-desc">Разово. Делай через backend или админ-бота, чтобы награда не начислялась повторно.</div>
+          </div>
+          <div class="earn-bonus">+50 ★</div>
+        </div>
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(74,222,128,0.2)">📦</div>
+          <div class="earn-text">
+            <div class="earn-title">Свой заказ</div>
+            <div class="earn-desc">После подтверждения менеджером</div>
+          </div>
+          <div class="earn-bonus">+100 ★</div>
+        </div>
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(255,101,132,0.2)">👥</div>
+          <div class="earn-text">
+            <div class="earn-title">Приглашение друга</div>
+            <div class="earn-desc">Когда друг впервые авторизуется через твою ссылку</div>
+          </div>
+          <div class="earn-bonus">+150 ★</div>
+        </div>
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(245,200,66,0.2)">🏆</div>
+          <div class="earn-text">
+            <div class="earn-title">Заказ приглашённого</div>
+            <div class="earn-desc">Когда заказ друга подтверждён</div>
+          </div>
+          <div class="earn-bonus">+300 ★</div>
+        </div>
+      </div>
+
+      <div class="section-title">Как потратить</div>
+      <div class="earn-list">
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(108,99,255,0.2)">💸</div>
+          <div class="earn-text">
+            <div class="earn-title">Скидка на заказ</div>
+            <div class="earn-desc">1 бонус = 1 рубль скидки</div>
+          </div>
+          <div class="earn-bonus">от 100 ★</div>
+        </div>
+        <div class="earn-item">
+          <div class="earn-icon" style="background: rgba(245,200,66,0.2)">🎁</div>
+          <div class="earn-text">
+            <div class="earn-title">Подарок / мерч</div>
+            <div class="earn-desc">При накоплении 1000 бонусов</div>
+          </div>
+          <div class="earn-bonus">1000 ★</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active" id="nav-home" onclick="showScreen('home')">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">Главная</div>
+      </div>
+      <div class="nav-item" id="nav-referral" onclick="showScreen('referral')">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label">Рефералы</div>
+      </div>
+      <div class="nav-item" id="nav-spend" onclick="showScreen('spend')">
+        <div class="nav-icon">💳</div>
+        <div class="nav-label">Бонусы</div>
+      </div>
+      <div class="nav-item" id="nav-order" onclick="showScreen('order')">
+        <div class="nav-icon">📦</div>
+        <div class="nav-label">Заказ</div>
+      </div>
+      <div class="nav-item" id="nav-history" onclick="showScreen('history')">
+        <div class="nav-icon">⭐</div>
+        <div class="nav-label">История</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      API_BASE_URL: 'https://your-api-domain.com',
+      BOT_USERNAME: 'StudProfyBonus_bot',
+      GIFT_TARGET: 1000,
+      MIN_DISCOUNT_BONUS: 100,
+      GIFT_COST: 1000,
+      DEMO_MODE_ALLOWED: true
+    };
+
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    const state = {
+      isTelegram: Boolean(tg),
+      isDemo: false,
+      token: '',
+      me: null,
+      stats: null,
+      referral: null,
+      history: [],
+      orders: []
+    };
+
+    const demoPayload = {
+      accessToken: 'demo-token',
+      user: {
+        id: 'demo-user',
+        telegramId: '0',
+        firstName: 'Демо',
+        lastName: '',
+        username: 'studprofy_demo',
+        photoUrl: null,
+        bonusBalance: 350,
+        refCode: 'DEMO1234'
+      },
+      stats: {
+        bonusBalance: 350,
+        friendsCount: 2,
+        ordersCount: 3,
+        savedRub: 350,
+        giftProgress: 350,
+        giftTarget: 1000,
+        referralOrdersCount: 1,
+        referralEarned: 450
+      },
+      referral: {
+        refCode: 'DEMO1234',
+        link: 'https://t.me/StudProfyBonus_bot?start=ref_DEMO1234'
+      },
+      history: [
+        { id: '1', type: 'REFERRAL_SIGNUP', amount: 150, description: 'Друг зарегистрировался', createdAt: new Date().toISOString() },
+        { id: '2', type: 'ORDER_REWARD', amount: 100, description: 'Бонус за подтверждённый заказ', createdAt: new Date(Date.now() - 86400000).toISOString() },
+        { id: '3', type: 'REDEEM', amount: -50, description: 'Списание бонусов на скидку', createdAt: new Date(Date.now() - 172800000).toISOString() }
+      ],
+      orders: []
+    };
+
+    function $(id) {
+      return document.getElementById(id);
+    }
+
+    function setBootText(text) {
+      $('boot-text').textContent = text;
+    }
+
+    function showToast(message) {
+      const t = $('toast');
+      t.textContent = message;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      try {
+        return new Date(value).toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch {
+        return '—';
+      }
+    }
+
+    function getTelegramUser() {
+      return tg?.initDataUnsafe?.user || null;
+    }
+
+    function getStartParam() {
+      return tg?.initDataUnsafe?.start_param || null;
+    }
+
+    function isInsideTelegram() {
+      return Boolean(tg && tg.initData);
+    }
+
+    async function apiFetch(path, options = {}) {
+      const url = `${CONFIG.API_BASE_URL}${path}`;
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      };
+
+      if (state.token) {
+        headers.Authorization = `Bearer ${state.token}`;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
+
+      let data = null;
+      const text = await response.text();
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { raw: text };
+        }
+      }
+
+      if (!response.ok) {
+        const message = data?.error || data?.message || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return data;
+    }
+
+    async function authenticateTelegram() {
+      setBootText('Авторизуем пользователя через Telegram initData...');
+      const auth = await apiFetch('/auth/telegram', {
+        method: 'POST',
+        body: JSON.stringify({
+          initData: tg.initData,
+          startParam: getStartParam()
+        })
+      });
+      state.token = auth.accessToken;
+      state.me = auth.user;
+      localStorage.setItem('studprofy_token', state.token);
+    }
+
+    async function loadAllData() {
+      setBootText('Загружаем профиль, статистику, реферальную ссылку и историю бонусов...');
+      const [me, stats, referral, history, orders] = await Promise.all([
+        state.me ? Promise.resolve(state.me) : apiFetch('/me'),
+        apiFetch('/stats'),
+        apiFetch('/referral-link'),
+        apiFetch('/bonus-history'),
+        apiFetch('/orders').catch(() => [])
+      ]);
+
+      state.me = me;
+      state.stats = stats;
+      state.referral = referral;
+      state.history = Array.isArray(history) ? history : [];
+      state.orders = Array.isArray(orders) ? orders : [];
+    }
+
+    function applyDemoData() {
+      state.isDemo = true;
+      state.token = demoPayload.accessToken;
+      state.me = demoPayload.user;
+      state.stats = demoPayload.stats;
+      state.referral = demoPayload.referral;
+      state.history = demoPayload.history;
+      state.orders = demoPayload.orders;
+    }
+
+    function showApp() {
+      $('boot-status').classList.add('hidden');
+      $('app-root').classList.remove('hidden');
+    }
+
+    function renderHomeStatus() {
+      const title = state.isDemo ? 'Демо-режим' : 'Система подключена';
+      const text = state.isDemo
+        ? 'Ты открыл приложение вне Telegram или без backend. Интерфейс рабочий, но сейчас показываются демо-данные.'
+        : 'Mini App авторизован через Telegram и подключён к backend API.';
+
+      $('home-status-title').textContent = title;
+      $('home-status-text').textContent = text;
+    }
+
+    function renderHistory() {
+      const list = $('history-list');
+      const empty = $('history-empty');
+      list.innerHTML = '';
+
+      if (!state.history.length) {
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+
+      state.history.forEach((item) => {
+        const el = document.createElement('div');
+        const amount = Number(item.amount || 0);
+        const amountClass = amount >= 0 ? 'plus' : 'minus';
+        const sign = amount >= 0 ? '+' : '';
+        el.className = 'history-item';
+        el.innerHTML = `
+          <div class="history-meta">
+            <div class="history-title">${escapeHtml(item.description || getBonusTypeLabel(item.type))}</div>
+            <div class="history-desc">${escapeHtml(getBonusTypeLabel(item.type))}</div>
+            <div class="history-date">${formatDate(item.createdAt)}</div>
+          </div>
+          <div class="history-amount ${amountClass}">${sign}${amount} ★</div>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    function renderStats() {
+      const me = state.me || {};
+      const stats = state.stats || {};
+      const referral = state.referral || {};
+      const balance = Number(stats.bonusBalance ?? me.bonusBalance ?? 0);
+      const giftTarget = Number(stats.giftTarget || CONFIG.GIFT_TARGET);
+      const progressRaw = Number(stats.giftProgress ?? balance);
+      const progress = Math.min(Math.max((progressRaw / giftTarget) * 100, 0), 100);
+      const friendsCount = Number(stats.friendsCount || 0);
+      const ordersCount = Number(stats.ordersCount || 0);
+      const savedRub = Number(stats.savedRub || 0);
+      const referralOrdersCount = Number(stats.referralOrdersCount || 0);
+      const referralEarned = Number(stats.referralEarned ?? Math.max(friendsCount * 150, 0));
+      const displayName = me.firstName || me.username || 'Студент';
+
+      $('user-name').textContent = displayName;
+      $('balance-display').innerHTML = `${balance} <span>★</span>`;
+      $('stat-referrals').textContent = friendsCount;
+      $('stat-orders').textContent = ordersCount;
+      $('stat-saved').textContent = `${savedRub}₽`;
+      $('spend-balance').textContent = `${balance} ★`;
+      $('progress-fill').style.width = `${progress}%`;
+      $('progress-text').textContent = `${Math.min(progressRaw, giftTarget)} / ${giftTarget}`;
+      $('ref-link-display').textContent = referral.link || `https://t.me/${CONFIG.BOT_USERNAME}?start=ref_${me.refCode || 'CODE'}`;
+      $('ref-count').textContent = friendsCount;
+      $('ref-earned').textContent = referralEarned;
+      $('ref-orders').textContent = referralOrdersCount;
+    }
+
+    function renderAll() {
+      renderStats();
+      renderHistory();
+      renderHomeStatus();
+    }
+
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+      const screen = document.getElementById(`screen-${name}`);
+      const nav = document.getElementById(`nav-${name}`);
+      if (screen) screen.classList.add('active');
+      if (nav) nav.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function getBonusTypeLabel(type) {
+      const map = {
+        WELCOME: 'Приветственный бонус',
+        REFERRAL_SIGNUP: 'Друг зарегистрировался',
+        REFERRAL_ORDER: 'Друг оформил заказ',
+        ORDER_REWARD: 'Бонус за заказ',
+        SUBSCRIPTION_REWARD: 'Подписка на канал',
+        REDEEM: 'Списание бонусов',
+        MANUAL: 'Ручное начисление'
+      };
+      return map[type] || type || 'Операция';
+    }
+
+    async function copyRefLink() {
+      const link = state.referral?.link;
+      if (!link) {
+        showToast('Ссылка ещё не загружена');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(link);
+        showToast('✅ Ссылка скопирована');
+      } catch {
+        showToast('Не удалось скопировать ссылку');
+      }
+    }
+
+    function shareRefLink() {
+      const link = state.referral?.link;
+      if (!link) {
+        showToast('Ссылка ещё не загружена');
+        return;
+      }
+      const shareText = encodeURIComponent('Привет! Закажи учебную работу в СтудПрофи по моей ссылке 🎓');
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${shareText}`;
+      if (tg) {
+        tg.openTelegramLink(shareUrl);
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    }
+
+    async function spendDiscount() {
+      const balance = Number(state.stats?.bonusBalance ?? state.me?.bonusBalance ?? 0);
+      if (balance < CONFIG.MIN_DISCOUNT_BONUS) {
+        alertOrTelegram(`❌ Нужно минимум ${CONFIG.MIN_DISCOUNT_BONUS} бонусов для скидки`);
+        return;
+      }
+
+      const amountStr = prompt(`Сколько бонусов списать? Минимум ${CONFIG.MIN_DISCOUNT_BONUS}, максимум ${balance}`);
+      if (!amountStr) return;
+
+      const amount = Number(amountStr);
+      if (!Number.isFinite(amount) || amount < CONFIG.MIN_DISCOUNT_BONUS || amount > balance) {
+        alertOrTelegram('❌ Укажи корректное количество бонусов');
+        return;
+      }
+
+      try {
+        await apiFetch('/bonuses/redeem', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount,
+            reason: 'discount'
+          })
+        });
+        showToast(`✅ Списано ${amount} ★ на скидку`);
+        await loadAllData();
+        renderAll();
+      } catch (error) {
+        alertOrTelegram(`Ошибка списания: ${error.message}`);
+      }
+    }
+
+    async function spendGift() {
+      const balance = Number(state.stats?.bonusBalance ?? state.me?.bonusBalance ?? 0);
+      if (balance < CONFIG.GIFT_COST) {
+        alertOrTelegram(`❌ Нужно ${CONFIG.GIFT_COST} бонусов для подарка. Сейчас у тебя ${balance} ★`);
+        return;
+      }
+
+      const ok = confirm('Списать 1000 бонусов на подарок?');
+      if (!ok) return;
+
+      try {
+        await apiFetch('/bonuses/redeem', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: CONFIG.GIFT_COST,
+            reason: 'gift'
+          })
+        });
+        showToast('🎁 Заявка на подарок отправлена');
+        await loadAllData();
+        renderAll();
+      } catch (error) {
+        alertOrTelegram(`Ошибка списания: ${error.message}`);
+      }
+    }
+
+    async function submitOrder() {
+      const btn = $('submit-order-btn');
+      const type = $('order-type').value;
+      const topic = $('order-topic').value.trim();
+      const university = $('order-uni').value.trim();
+      const deadline = $('order-deadline').value;
+      const requirements = $('order-extra').value.trim();
+
+      if (!topic || !university) {
+        alertOrTelegram('❌ Заполни тему и учебное заведение');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Отправляем...';
+
+      try {
+        await apiFetch('/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            type,
+            topic,
+            university,
+            deadline: deadline || null,
+            requirements
+          })
+        });
+
+        alertOrTelegram('✅ Заказ отправлен. Менеджер свяжется с тобой. Бонусы начислим после подтверждения заказа.');
+
+        $('order-topic').value = '';
+        $('order-uni').value = '';
+        $('order-deadline').value = '';
+        $('order-extra').value = '';
+        await loadAllData();
+        renderAll();
+        showScreen('home');
+      } catch (error) {
+        alertOrTelegram(`Ошибка отправки заказа: ${error.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📦 Отправить заказ';
+      }
+    }
+
+    function alertOrTelegram(message) {
+      if (tg && tg.showAlert) {
+        tg.showAlert(message);
+      } else {
+        alert(message);
+      }
+    }
+
+    async function init() {
+      try {
+        if (tg) {
+          tg.ready();
+          tg.expand();
+          try { tg.setHeaderColor('#0d0f14'); } catch {}
+          try { tg.setBackgroundColor('#0d0f14'); } catch {}
+        }
+
+        if (!isInsideTelegram()) {
+          if (!CONFIG.DEMO_MODE_ALLOWED) {
+            throw new Error('Mini App нужно открывать из Telegram');
+          }
+          setBootText('Telegram initData не найден. Запускаем демо-режим, чтобы ты мог проверить интерфейс.');
+          applyDemoData();
+          renderAll();
+          showApp();
+          return;
+        }
+
+        await authenticateTelegram();
+        await loadAllData();
+        renderAll();
+        showApp();
+      } catch (error) {
+        console.error(error);
+        if (CONFIG.DEMO_MODE_ALLOWED) {
+          setBootText(`Backend пока не отвечает: ${error.message}. Включаю демо-режим.`);
+          applyDemoData();
+          renderAll();
+          showApp();
+          showToast('Открыт демо-режим');
+        } else {
+          $('boot-status').classList.remove('hidden');
+          $('boot-status').innerHTML = `
+            <div class="auth-title">Не удалось запустить Mini App</div>
+            <div class="auth-text">${escapeHtml(error.message || 'Неизвестная ошибка')}</div>
+          `;
+        }
+      }
+    }
+
+    window.showScreen = showScreen;
+    window.copyRefLink = copyRefLink;
+    window.shareRefLink = shareRefLink;
+    window.spendDiscount = spendDiscount;
+    window.spendGift = spendGift;
+    window.submitOrder = submitOrder;
+
+    init();
+  </script>
+</body>
+</html>
