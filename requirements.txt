@@ -1,6 +1,3 @@
 aiogram==3.13.1
 python-dotenv==1.0.1
 supabase==2.7.4
-git add requirements.txt
-git commit -m "add supabase dependency"
-git push
