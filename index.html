@@ -528,9 +528,9 @@
       type:       typeEl.options[typeEl.selectedIndex].text,
       topic,
       university: uni,
-      deadline:   document.getElementById('order-deadline').value || null,
-      extra:      document.getElementById('order-extra').value.trim() || null,
-      status:     'pending'
+      deadline:      document.getElementById('order-deadline').value || null,
+      requirements: document.getElementById('order-extra').value.trim() || null,
+      status:        'pending'
     });
 
     btn.disabled = false; btn.textContent = '📦 Отправить заказ (+100 бонусов)';
