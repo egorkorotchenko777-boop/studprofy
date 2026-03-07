@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 
+from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -19,19 +20,16 @@ MANAGER_ID = int(os.getenv("MANAGER_ID", "0"))
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://example.com/")
+PORT = int(os.getenv("PORT", "10000"))
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN is not set")
-
 if not MANAGER_ID:
     raise ValueError("MANAGER_ID is not set or invalid")
-
 if not SUPABASE_URL:
     raise ValueError("SUPABASE_URL is not set")
-
 if not SUPABASE_KEY:
     raise ValueError("SUPABASE_KEY is not set")
-
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -42,7 +40,6 @@ sb: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def get_or_create_user(tg_user):
-    """Ищет пользователя по telegram_id, создаёт если нет."""
     tg_id = tg_user.id
 
     res = (
@@ -70,12 +67,10 @@ def get_or_create_user(tg_user):
         .single()
         .execute()
     )
-
     return new_user.data
 
 
 def add_bonus(user_id: str, amount: int, tx_type: str, title: str):
-    """Начисляет/списывает бонусы и пишет транзакцию."""
     user_res = (
         sb.from_("users")
         .select("bonus_balance")
@@ -248,13 +243,7 @@ async def cmd_orders(message: Message):
     await message.answer(text, parse_mode="Markdown")
 
 
-@dp.message(Command("notify_order"))
-async def notify_order(message: Message):
-    await message.answer("Команда зарезервирована для внутреннего использования.")
-
-
 async def poll_new_orders():
-    """Раз в 10 сек проверяем новые заказы и уведомляем менеджера."""
     notified = set()
 
     while True:
@@ -356,19 +345,9 @@ async def handle_status_change(call: CallbackQuery):
     }
 
     client_messages = {
-        "working": (
-            "🔵 Твой заказ взят в работу!\n\n"
-            "Менеджер уже занимается им. Ждём результата 💪"
-        ),
-        "done": (
-            "✅ Твой заказ готов!\n\n"
-            "🎉 На твой счёт начислено +100 ★ бонусов!\n\n"
-            "Спасибо, что выбрал СтудПрофи!"
-        ),
-        "cancelled": (
-            "❌ К сожалению, твой заказ был отменён.\n\n"
-            "Если есть вопросы — напиши менеджеру."
-        ),
+        "working": "🔵 Твой заказ взят в работу!\n\nМенеджер уже занимается им.",
+        "done": "✅ Твой заказ готов!\n\n🎉 На твой счёт начислено +100 ★ бонусов!",
+        "cancelled": "❌ К сожалению, твой заказ был отменён.",
     }
 
     sb.from_("orders").update({"status": new_status}).eq("id", order_id).execute()
@@ -487,7 +466,26 @@ async def cmd_pending(message: Message):
         await message.answer(text, parse_mode="Markdown", reply_markup=kb)
 
 
+async def healthcheck(request):
+    return web.Response(text="OK")
+
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", healthcheck)
+    app.router.add_get("/healthz", healthcheck)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    site = web.TCPSite(runner, "0.0.0.0", PORT)
+    await site.start()
+
+    log.info("Web server started on port %s", PORT)
+
+
 async def main():
+    await start_web_server()
     asyncio.create_task(poll_new_orders())
     await dp.start_polling(bot)
 
