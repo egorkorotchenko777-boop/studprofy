@@ -150,8 +150,8 @@ async def cmd_orders(message: Message):
         await message.answer("📭 У тебя пока нет заказов.\n\nОформи первый в приложении!")
         return
 
-    status_emoji = {"pending": "🟡", "working": "🔵", "done": "✅", "cancelled": "❌"}
-    status_text  = {"pending": "На рассмотрении", "working": "В работе", "done": "Готово", "cancelled": "Отменён"}
+    status_emoji = {"new": "🟡", "working": "🔵", "done": "✅", "cancelled": "❌"}
+    status_text  = {"new": "На рассмотрении", "working": "В работе", "done": "Готово", "cancelled": "Отменён"}
 
     text = "📦 *Твои последние заказы:*\n\n"
     for o in orders:
@@ -183,7 +183,7 @@ async def poll_new_orders():
         try:
             orders = sb.from_("orders") \
                 .select("*, users(telegram_id, first_name, username)") \
-                .eq("status", "pending") \
+                .eq("status", "new") \
                 .eq("manager_notified", False) \
                 .execute().data or []
 
@@ -291,7 +291,7 @@ async def cmd_admin(message: Message):
     # Считаем статистику
     users_count  = len(sb.from_("users").select("id").execute().data or [])
     orders_total = len(sb.from_("orders").select("id").execute().data or [])
-    orders_new   = len(sb.from_("orders").select("id").eq("status","pending").execute().data or [])
+    orders_new   = len(sb.from_("orders").select("id").eq("status","new").execute().data or [])
     orders_work  = len(sb.from_("orders").select("id").eq("status","working").execute().data or [])
 
     await message.answer(
@@ -309,7 +309,7 @@ async def cmd_admin(message: Message):
 # /pending — показать новые заказы вручную
 # ───────────────────────────────────────────
 
-@dp.message(Command("pending"))
+@dp.message(Command("new"))
 async def cmd_pending(message: Message):
     if message.from_user.id != MANAGER_ID:
         await message.answer("❌ Нет доступа")
@@ -317,7 +317,7 @@ async def cmd_pending(message: Message):
 
     orders = sb.from_("orders") \
         .select("*, users(telegram_id, first_name, username)") \
-        .eq("status", "pending") \
+        .eq("status", "new") \
         .order("created_at", desc=True) \
         .limit(10).execute().data or []
 
