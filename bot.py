@@ -22,9 +22,9 @@ WEBAPP_URL   = os.getenv("WEBAPP_URL", "https://egorkorotchenko777-boop.github.i
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=8771034458:AAEXVL8Y5M9BAIIP5jtovgVcO12r2FY_N0U)
 dp  = Dispatcher(storage=MemoryStorage())
-sb  = create_client(SUPABASE_URL, SUPABASE_KEY)
+sb  = create_client(https://hmtvzflvnzxhoalshwmt.supabase.co, sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz)
 
 
 # ───────────────────────────────────────────
