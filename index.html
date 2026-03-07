@@ -353,8 +353,9 @@
   tg.setBackgroundColor('#0d0f14');
 
   const tgUser = tg.initDataUnsafe?.user || null;
-  const tgId   = tgUser?.id   || null;
-  const tgName = tgUser?.first_name || 'Студент';
+  // В браузере без Telegram используем тестовый ID
+  const tgId   = tgUser?.id   || 999999999;
+  const tgName = tgUser?.first_name || 'Тест';
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
