@@ -203,7 +203,7 @@ async def poll_new_orders():
                     f"🏫 Вуз: {order.get('university','')}\n"
                     f"📄 Страниц: {order.get('pages','—')}\n"
                     f"📅 Дедлайн: {order.get('deadline','—')}\n"
-                    f"💬 Доп.: {order.get('extra','—')}\n"
+                    f"💬 Доп.: {order.get('requirements','—')}\n"
                 )
 
                 kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -357,7 +357,7 @@ async def cmd_pending(message: Message):
 async def main():
     # Запускаем polling новых заказов параллельно
     asyncio.create_task(poll_new_orders())
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, allowed_updates=['message', 'callback_query'])
 
 
 if __name__ == "__main__":
