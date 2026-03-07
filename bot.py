@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -354,7 +355,20 @@ async def cmd_pending(message: Message):
 # ЗАПУСК
 # ───────────────────────────────────────────
 
+async def health(request):
+    return web.Response(text="OK")
+
+
 async def main():
+    # Запускаем health-check сервер для Render
+    app = web.Application()
+    app.router.add_get("/", health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", 10000)))
+    await site.start()
+    log.info("Health check server started")
+
     # Запускаем polling новых заказов параллельно
     asyncio.create_task(poll_new_orders())
     await dp.start_polling(bot, allowed_updates=['message', 'callback_query'])
