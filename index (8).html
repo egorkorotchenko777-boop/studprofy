@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>СтудПрофи — Бонусы</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Nunito:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0f14; --card: #161a23; --card2: #1e2330;
+      --accent: #6c63ff; --accent2: #ff6584; --gold: #f5c842;
+      --text: #f0f2ff; --muted: #7b82a0; --radius: 18px;
+      --green: #4ade80; --blue: #38bdf8; --orange: #fb923c;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    .loader-wrap { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px; transition: opacity 0.4s; }
+    .loader-wrap.hidden { opacity: 0; pointer-events: none; }
+    .loader-logo { font-family: 'Unbounded', sans-serif; font-size: 20px; color: var(--accent); }
+    .loader-logo span { color: var(--accent2); }
+    .loader-spinner { width: 36px; height: 36px; border: 3px solid rgba(108,99,255,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .onboarding-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); z-index: 8000; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+    .onboarding-overlay.hidden { display: none; }
+    .onboarding-sheet { background: var(--card); border-radius: 28px 28px 0 0; padding: 28px 24px 40px; width: 100%; animation: slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .onboarding-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 10px; margin: 0 auto 24px; }
+    .onboarding-title { font-family: 'Unbounded', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; text-align: center; }
+    .onboarding-sub { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 28px; line-height: 1.6; }
+    .onboarding-steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
+    .ob-step { display: flex; align-items: center; gap: 14px; background: var(--bg); border-radius: 14px; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.06); }
+    .ob-step-num { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #9c63ff); display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 700; color: white; flex-shrink: 0; }
+    .ob-step-text { flex: 1; }
+    .ob-step-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .ob-step-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ob-step-bonus { font-family: 'Unbounded', sans-serif; font-size: 12px; color: var(--gold); font-weight: 700; }
+    .ob-start-btn { width: 100%; background: linear-gradient(135deg, var(--accent), #9c63ff); border: none; border-radius: 16px; padding: 16px; color: white; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    .header { padding: 20px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-family: 'Unbounded', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    .user-name { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+    .balance-card { margin: 20px 20px 0; background: linear-gradient(135deg, #1a1060 0%, #2d1b69 50%, #1a0a3d 100%); border-radius: var(--radius); padding: 24px; position: relative; overflow: hidden; border: 1px solid rgba(108,99,255,0.3); }
+    .balance-card::before { content: ''; position: absolute; top: -40px; right: -40px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(108,99,255,0.4) 0%, transparent 70%); border-radius: 50%; }
+    .balance-card::after { content: ''; position: absolute; bottom: -30px; left: 20px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255,101,132,0.3) 0%, transparent 70%); border-radius: 50%; }
+    .balance-label { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .balance-amount { font-family: 'Unbounded', sans-serif; font-size: 40px; font-weight: 700; color: #fff; line-height: 1; }
+    .balance-amount span { font-size: 18px; color: var(--gold); margin-left: 6px; }
+    .balance-sub { margin-top: 16px; display: flex; gap: 20px; }
+    .balance-stat { display: flex; flex-direction: column; gap: 2px; }
+    .balance-stat-val { font-family: 'Unbounded', sans-serif; font-size: 16px; font-weight: 600; color: #fff; }
+    .balance-stat-lbl { font-size: 11px; color: rgba(255,255,255,0.5); }
+    .progress-wrap { margin-top: 18px; }
+    .progress-lbl { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 10px; transition: width 0.8s ease; }
+
+    .section-title { font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; padding: 24px 20px 12px; }
+
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px; }
+    .action-btn { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius); padding: 18px 16px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn .icon { font-size: 26px; line-height: 1; }
+    .action-btn .btn-title { font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .action-btn .btn-sub { font-size: 11px; color: var(--muted); }
+    .action-btn.accent { background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05)); border-color: rgba(108,99,255,0.3); }
+    .action-btn.red { background: linear-gradient(135deg, rgba(255,101,132,0.2), rgba(255,101,132,0.05)); border-color: rgba(255,101,132,0.3); }
+    .action-btn.gold { background: linear-gradient(135deg, rgba(245,200,66,0.2), rgba(245,200,66,0.05)); border-color: rgba(245,200,66,0.3); }
+    .action-btn.green { background: linear-gradient(135deg, rgba(74,222,128,0.2), rgba(74,222,128,0.05)); border-color: rgba(74,222,128,0.3); }
+
+    .earn-list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+    .earn-item { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+    .earn-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .earn-text { flex: 1; }
+    .earn-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .earn-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .earn-bonus { font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 700; color: var(--gold); }
+
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(13,15,20,0.97); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.07); display: flex; padding: 10px 0 20px; z-index: 100; }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 6px 0; transition: all 0.2s; }
+    .nav-item .nav-icon { font-size: 20px; filter: grayscale(1) opacity(0.5); transition: all 0.2s; }
+    .nav-item .nav-label { font-size: 9px; color: var(--muted); font-weight: 600; transition: all 0.2s; }
+    .nav-item.active .nav-icon { filter: none; }
+    .nav-item.active .nav-label { color: var(--accent); }
+
+    .ref-card { margin: 20px 20px 0; background: var(--card); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius); padding: 20px; }
+    .ref-card h3 { font-family: 'Unbounded', sans-serif; font-size: 13px; margin-bottom: 10px; color: var(--text); }
+    .ref-link-box { background: var(--bg); border: 1px solid rgba(108,99,255,0.4); border-radius: 12px; padding: 12px 16px; font-size: 12px; color: var(--muted); word-break: break-all; margin-bottom: 12px; line-height: 1.5; }
+    .copy-btn { width: 100%; background: linear-gradient(135deg, var(--accent), #9c63ff); border: none; border-radius: 12px; padding: 14px; color: white; font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .copy-btn:active { opacity: 0.8; }
+    .ref-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 16px 20px 0; }
+    .ref-stat-card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 16px 12px; text-align: center; }
+    .ref-stat-num { font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); }
+    .ref-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    .spend-options { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+    .spend-card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px; }
+    .spend-card:active { transform: scale(0.98); }
+    .spend-icon { font-size: 36px; }
+    .spend-info { flex: 1; }
+    .spend-title { font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .spend-desc { font-size: 12px; color: var(--muted); }
+    .spend-cost { font-family: 'Unbounded', sans-serif; font-size: 13px; color: var(--gold); font-weight: 700; }
+
+    .order-form { padding: 0 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
+    .form-input, .form-textarea { width: 100%; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 13px 16px; color: var(--text); font-family: 'Nunito', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
+    .form-input:focus, .form-textarea:focus { border-color: rgba(108,99,255,0.5); }
+    .form-textarea { min-height: 90px; resize: none; }
+    .pages-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pages-chip { padding: 8px 14px; border-radius: 10px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .pages-chip.active { background: rgba(108,99,255,0.2); border-color: rgba(108,99,255,0.5); color: var(--text); }
+    .price-preview { background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(108,99,255,0.05)); border: 1px solid rgba(108,99,255,0.25); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .price-preview-label { font-size: 12px; color: var(--muted); }
+    .price-preview-val { font-family: 'Unbounded', sans-serif; font-size: 16px; color: var(--accent); font-weight: 700; }
+    .submit-btn { width: 100%; background: linear-gradient(135deg, var(--accent), #9c63ff); border: none; border-radius: 14px; padding: 16px; color: white; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
+    .submit-btn:active { opacity: 0.8; }
+    .submit-btn:disabled { opacity: 0.5; }
+
+    .history-tabs { display: flex; gap: 8px; padding: 16px 20px 0; }
+    .history-tab { flex: 1; text-align: center; padding: 10px; border-radius: 12px; font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.06); background: var(--card); color: var(--muted); }
+    .history-tab.active { background: rgba(108,99,255,0.2); border-color: rgba(108,99,255,0.4); color: var(--text); }
+    .history-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+    .history-item { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+    .history-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .history-text { flex: 1; min-width: 0; }
+    .history-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .history-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .history-amount { font-family: 'Unbounded', sans-serif; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+    .history-amount.plus { color: var(--green); }
+    .history-amount.minus { color: var(--accent2); }
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+    .empty-state .empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+
+    .orders-list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+    .order-card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius); padding: 16px; }
+    .order-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .order-card-type { font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 600; color: var(--text); }
+    .order-card-topic { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .status-badge { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+    .status-badge.pending { background: rgba(245,200,66,0.15); color: var(--gold); border: 1px solid rgba(245,200,66,0.25); }
+    .status-badge.working { background: rgba(56,189,248,0.15); color: var(--blue); border: 1px solid rgba(56,189,248,0.25); }
+    .status-badge.done { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+    .status-badge.cancelled { background: rgba(255,101,132,0.15); color: var(--accent2); border: 1px solid rgba(255,101,132,0.25); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-badge.working .status-dot { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    .order-timeline { display: flex; align-items: center; margin-top: 12px; }
+    .timeline-step { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .timeline-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.08); position: relative; z-index: 1; }
+    .timeline-dot.done-step { background: rgba(74,222,128,0.2); border-color: var(--green); color: var(--green); }
+    .timeline-dot.active-step { background: rgba(56,189,248,0.2); border-color: var(--blue); color: var(--blue); }
+    .timeline-label { font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center; }
+    .timeline-line { flex: 1; height: 2px; background: rgba(255,255,255,0.07); margin-top: -10px; }
+    .timeline-line.done { background: var(--green); }
+    .order-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .order-card-date { font-size: 11px; color: var(--muted); }
+    .order-card-bonus { font-family: 'Unbounded', sans-serif; font-size: 11px; color: var(--gold); }
+    .orders-new-btn { display: inline-block; margin-top: 16px; background: linear-gradient(135deg, var(--accent), #9c63ff); border: none; border-radius: 12px; padding: 12px 24px; color: white; font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; }
+
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: var(--green); color: #000; padding: 12px 24px; border-radius: 50px; font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; z-index: 9000; transition: transform 0.3s ease; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .spacer { height: 110px; }
+  </style>
+</head>
+<body>
+
+<div class="loader-wrap" id="loader">
+  <div class="loader-logo">Студ<span>Профи</span></div>
+  <div class="loader-spinner"></div>
+</div>
+
+<div class="onboarding-overlay hidden" id="onboarding">
+  <div class="onboarding-sheet">
+    <div class="onboarding-handle"></div>
+    <div class="onboarding-title">👋 Привет, студент!</div>
+    <div class="onboarding-sub">Добро пожаловать в программу бонусов СтудПрофи. Вот как заработать первые звёзды:</div>
+    <div class="onboarding-steps">
+      <div class="ob-step"><div class="ob-step-num">1</div><div class="ob-step-text"><div class="ob-step-title">Сделай первый заказ</div><div class="ob-step-desc">Курсовая, реферат, диплом — всё что нужно</div></div><div class="ob-step-bonus">+100 ★</div></div>
+      <div class="ob-step"><div class="ob-step-num">2</div><div class="ob-step-text"><div class="ob-step-title">Пригласи друга</div><div class="ob-step-desc">Поделись ссылкой — получишь бонусы</div></div><div class="ob-step-bonus">+150 ★</div></div>
+      <div class="ob-step"><div class="ob-step-num">3</div><div class="ob-step-text"><div class="ob-step-title">Трать бонусы</div><div class="ob-step-desc">Скидка на следующий заказ или подарок</div></div><div class="ob-step-bonus">🎁</div></div>
+    </div>
+    <button class="ob-start-btn" onclick="closeOnboarding()">🚀 Начать зарабатывать</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ГЛАВНАЯ -->
+<div class="screen active" id="screen-home">
+  <div class="header"><div class="logo">Студ<span>Профи</span></div><div class="user-name" id="user-name">Загрузка...</div></div>
+  <div class="balance-card">
+    <div class="balance-label">Твои бонусы</div>
+    <div class="balance-amount" id="balance-display">0 <span>★</span></div>
+    <div class="balance-sub">
+      <div class="balance-stat"><div class="balance-stat-val" id="stat-referrals">0</div><div class="balance-stat-lbl">Друзей</div></div>
+      <div class="balance-stat"><div class="balance-stat-val" id="stat-orders">0</div><div class="balance-stat-lbl">Заказов</div></div>
+      <div class="balance-stat"><div class="balance-stat-val" id="stat-saved">0₽</div><div class="balance-stat-lbl">Сэкономлено</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-lbl"><span>До подарка 🎁</span><span id="progress-text">0 / 1000</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="section-title">Действия</div>
+  <div class="action-grid">
+    <div class="action-btn accent" onclick="showScreen('referral')"><div class="icon">👥</div><div class="btn-title">Пригласить друга</div><div class="btn-sub">+150 бонусов</div></div>
+    <div class="action-btn green" onclick="showScreen('order')"><div class="icon">📦</div><div class="btn-title">Новый заказ</div><div class="btn-sub">+100 бонусов</div></div>
+    <div class="action-btn gold" onclick="showScreen('spend')"><div class="icon">💳</div><div class="btn-title">Потратить бонусы</div><div class="btn-sub">Скидка или подарок</div></div>
+    <div class="action-btn red" onclick="showScreen('earn')"><div class="icon">⭐</div><div class="btn-title">Как заработать</div><div class="btn-sub">Все способы</div></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- РЕФЕРАЛЫ -->
+<div class="screen" id="screen-referral">
+  <div class="header"><div class="logo">Студ<span>Профи</span></div><div class="user-name">Рефералы</div></div>
+  <div class="ref-card">
+    <h3>🔗 Твоя реферальная ссылка</h3>
+    <div class="ref-link-box" id="ref-link-display">Загрузка...</div>
+    <button class="copy-btn" onclick="copyRefLink()">📋 Скопировать и поделиться</button>
+  </div>
+  <div class="ref-stats">
+    <div class="ref-stat-card"><div class="ref-stat-num" id="ref-count">0</div><div class="ref-stat-lbl">Друзей</div></div>
+    <div class="ref-stat-card"><div class="ref-stat-num" style="color:var(--gold)" id="ref-earned">0</div><div class="ref-stat-lbl">Заработано ★</div></div>
+    <div class="ref-stat-card"><div class="ref-stat-num" style="color:var(--green)" id="ref-orders">0</div><div class="ref-stat-lbl">Заказов</div></div>
+  </div>
+  <div class="section-title">Как работает</div>
+  <div class="earn-list">
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(108,99,255,0.2)">👋</div><div class="earn-text"><div class="earn-title">Друг регистрируется</div><div class="earn-desc">Переходит по твоей ссылке</div></div><div class="earn-bonus">+150 ★</div></div>
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(74,222,128,0.2)">📦</div><div class="earn-text"><div class="earn-title">Друг делает заказ</div><div class="earn-desc">После подтверждения заказа</div></div><div class="earn-bonus">+300 ★</div></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- КАК ЗАРАБОТАТЬ -->
+<div class="screen" id="screen-earn">
+  <div class="header"><div class="logo">Студ<span>Профи</span></div><div class="user-name">Как заработать</div></div>
+  <div class="section-title">Все способы</div>
+  <div class="earn-list">
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(108,99,255,0.2)">📢</div><div class="earn-text"><div class="earn-title">Подписка на канал</div><div class="earn-desc">Разово при первом входе</div></div><div class="earn-bonus">+50 ★</div></div>
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(74,222,128,0.2)">📦</div><div class="earn-text"><div class="earn-title">Свой заказ</div><div class="earn-desc">После подтверждения</div></div><div class="earn-bonus">+100 ★</div></div>
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(255,101,132,0.2)">👥</div><div class="earn-text"><div class="earn-title">Приглашение друга</div><div class="earn-desc">Когда друг зарегистрируется</div></div><div class="earn-bonus">+150 ★</div></div>
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(245,200,66,0.2)">🏆</div><div class="earn-text"><div class="earn-title">Заказ приглашённого</div><div class="earn-desc">Когда друг оформит заказ</div></div><div class="earn-bonus">+300 ★</div></div>
+  </div>
+  <div class="section-title">Как потратить</div>
+  <div class="earn-list">
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(108,99,255,0.2)">💸</div><div class="earn-text"><div class="earn-title">Скидка на заказ</div><div class="earn-desc">1 бонус = 1 рубль скидки</div></div><div class="earn-bonus">от 100 ★</div></div>
+    <div class="earn-item"><div class="earn-icon" style="background:rgba(245,200,66,0.2)">🎁</div><div class="earn-text"><div class="earn-title">Подарок / мерч</div><div class="earn-desc">При накоплении 1000 бонусов</div></div><div class="earn-bonus">1000 ★</div></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ПОТРАТИТЬ -->
+<div class="screen" id="screen-spend">
+  <div class="header"><div class="logo">Студ<span>Профи</span></div><div class="user-name">Потратить бонусы</div></div>
+  <div class="section-title">Твой баланс: <span id="spend-balance" style="color:var(--gold)">0 ★</span></div>
+  <div class="spend-options">
+    <div class="spend-card" onclick="spendDiscount()"><div class="spend-icon">💸</div><div class="spend-info"><div class="spend-title">Скидка на заказ</div><div class="spend-desc">1 бонус = 1 рубль скидки</div></div><div class="spend-cost">от 100 ★</div></div>
+    <div class="spend-card" onclick="spendGift()"><div class="spend-icon">🎁</div><div class="spend-info"><div class="spend-title">Получить подарок</div><div class="spend-desc">Мерч от СтудПрофи</div></div><div class="spend-cost">1000 ★</div></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ЗАКАЗ -->
+<div class="screen" id="screen-order">
+  <div class="header"><div class="logo">Студ<span>Профи</span></div><div class="user-name">Новый заказ</div></div>
+  <div class="section-title">Заполни форму</div>
+  <div class="order-form">
+    <div class="form-group">
+      <label class="form-label">Тип работы</label>
+      <select class="form-input" id="order-type" onchange="updatePrice()">
+        <option value="1000">📄 Доклад — от 1 000 ₽</option>
+        <option value="1500">📝 Реферат — от 1 500 ₽</option>
+        <option value="2500">📊 Проектная работа — от 2 500 ₽</option>
+        <option value="6000">📚 Курсовая работа — от 6 000 ₽</option>
+        <option value="12000">🎓 Дипломная работа — от 12 000 ₽</option>
+        <option value="4500">🏢 Отчёт по практике — от 4 500 ₽</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Тема работы</label><input class="form-input" id="order-topic" type="text" placeholder="Например: Маркетинговый анализ рынка..." /></div>
+    <div class="form-group"><label class="form-label">Учебное заведение</label><input class="form-input" id="order-uni" type="text" placeholder="МГУ, МГТУ, СПбГУ..." /></div>
+    <div class="form-group">
+      <label class="form-label">Количество страниц</label>
+      <div class="pages-row">
+        <div class="pages-chip" onclick="selectPages(this,10)">10 стр.</div>
+        <div class="pages-chip active" onclick="selectPages(this,20)">20 стр.</div>
+        <div class="pages-chip" onclick="selectPages(this,30)">30 стр.</div>
+        <div class="pages-chip" onclick="selectPages(this,50)">50 стр.</div>
+        <div class="pages-chip" onclick="selectPages(this,80)">80+ стр.</div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Дедлайн</label><input class="form-input" id="order-deadline" type="date" /></div>
+    <div class="form-group"><label class="form-label">Доп. требования <span style="color:var(--muted);font-weight:400">(необязательно)</span></label><textarea class="form-textarea" id="order-extra" placeholder="Объём, стиль оформления, особые требования..."></textarea></div>
+    <div class="price-preview">
+      <span class="price-preview-label">💰 Примерная стоимость</span>
+      <span class="price-preview-val" id="price-preview-val">от 1 000 ₽</span>
+    </div>
+    <button class="submit-btn" id="submit-btn" onclick="submitOrder()">📦 Отправить заказ (+100 бонусов)</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- ИСТОРИЯ -->
+<div class="screen" id="screen-history">
+  <div class="header"><div class="logo">Студ<span>Профи</span></div><div class="user-name">История</div></div>
+  <div class="history-tabs">
+    <div class="history-tab active" id="tab-tx" onclick="switchTab('tx')">★ Бонусы</div>
+    <div class="history-tab" id="tab-ord" onclick="switchTab('ord')">📦 Заказы</div>
+  </div>
+  <div id="panel-tx">
+    <div class="section-title">Начисления и списания</div>
+    <div class="history-list" id="history-list"><div class="empty-state"><span class="empty-icon">📭</span>Загрузка...</div></div>
+  </div>
+  <div id="panel-ord" style="display:none">
+    <div class="section-title">Мои заказы</div>
+    <div class="orders-list" id="orders-list"><div class="empty-state"><span class="empty-icon">📂</span>Загрузка...</div></div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- НАВИГАЦИЯ -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="showScreen('home')"><div class="nav-icon">🏠</div><div class="nav-label">Главная</div></div>
+  <div class="nav-item" id="nav-referral" onclick="showScreen('referral')"><div class="nav-icon">👥</div><div class="nav-label">Рефералы</div></div>
+  <div class="nav-item" id="nav-spend" onclick="showScreen('spend')"><div class="nav-icon">💳</div><div class="nav-label">Бонусы</div></div>
+  <div class="nav-item" id="nav-order" onclick="showScreen('order')"><div class="nav-icon">📦</div><div class="nav-label">Заказ</div></div>
+  <div class="nav-item" id="nav-history" onclick="showScreen('history')"><div class="nav-icon">📋</div><div class="nav-label">История</div></div>
+</div>
+
+<script>
+  // ==============================
+  // ⚙️ НАСТРОЙКИ
+  // ==============================
+  const SUPABASE_URL = 'https://hmtvzflvnzxhoalshwmt.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz';
+  const BOT_USERNAME = 'StudProfyBonus_bot';
+  // ==============================
+
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  tg.setHeaderColor('#0d0f14');
+  tg.setBackgroundColor('#0d0f14');
+
+  const tgUser = tg.initDataUnsafe?.user || null;
+  const tgId   = tgUser?.id   || null;
+  const tgName = tgUser?.first_name || 'Студент';
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser  = null;
+  let selectedPages = 20;
+
+  // ===== СТАРТ =====
+  async function init() {
+    if (!tgId) { hideLoader(); return; }
+
+    // Ищем или создаём пользователя
+    let { data: user } = await sb
+      .from('users')
+      .select('*')
+      .eq('telegram_id', tgId)
+      .maybeSingle();
+
+    if (!user) {
+      const { data: newUser } = await sb
+        .from('users')
+        .insert({
+          telegram_id: tgId,
+          username:    tgUser?.username   || null,
+          first_name:  tgUser?.first_name || 'Студент',
+          last_name:   tgUser?.last_name  || null,
+          photo_url:   tgUser?.photo_url  || null,
+        })
+        .select()
+        .single();
+      user = newUser;
+    }
+
+    currentUser = user;
+    renderMain();
+    await Promise.all([loadStats(), loadHistory(), loadOrders()]);
+    hideLoader();
+    checkOnboarding();
+  }
+
+  // ===== ГЛАВНЫЙ ЭКРАН =====
+  function renderMain() {
+    if (!currentUser) return;
+    const bal = currentUser.balance || 0;
+    document.getElementById('user-name').textContent = tgName;
+    document.getElementById('balance-display').innerHTML = bal + ' <span>★</span>';
+    document.getElementById('spend-balance').textContent = bal + ' ★';
+    document.getElementById('progress-fill').style.width = Math.min((bal/1000)*100, 100) + '%';
+    document.getElementById('progress-text').textContent = Math.min(bal, 1000) + ' / 1000';
+    document.getElementById('ref-link-display').textContent = `https://t.me/${BOT_USERNAME}?start=ref_${tgId}`;
+  }
+
+  // ===== СТАТИСТИКА =====
+  async function loadStats() {
+    if (!currentUser) return;
+
+    const [{ data: refs }, { data: ords }] = await Promise.all([
+      sb.from('referrals').select('id', { count: 'exact' }).eq('referrer_id', currentUser.id),
+      sb.from('orders').select('id', { count: 'exact' }).eq('user_id', currentUser.id)
+    ]);
+
+    const refCount = refs?.length || 0;
+    const ordCount = ords?.length || 0;
+
+    document.getElementById('stat-referrals').textContent = refCount;
+    document.getElementById('stat-orders').textContent    = ordCount;
+    document.getElementById('stat-saved').textContent     = '0₽';
+    document.getElementById('ref-count').textContent      = refCount;
+    document.getElementById('ref-earned').textContent     = refCount * 150;
+    document.getElementById('ref-orders').textContent     = ordCount;
+  }
+
+  // ===== ИСТОРИЯ ТРАНЗАКЦИЙ =====
+  async function loadHistory() {
+    if (!currentUser) return;
+    const { data: txs } = await sb
+      .from('transactions')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    const list = document.getElementById('history-list');
+    if (!txs?.length) {
+      list.innerHTML = `<div class="empty-state"><span class="empty-icon">📭</span>История пока пуста.<br>Сделай первый заказ или пригласи друга!</div>`;
+      return;
+    }
+    const icons = { order:'📦', referral:'👥', gift:'🎁', discount:'💸', subscribe:'📢' };
+    const bgs   = { order:'rgba(74,222,128,0.15)', referral:'rgba(108,99,255,0.15)', gift:'rgba(245,200,66,0.15)', discount:'rgba(255,101,132,0.15)', subscribe:'rgba(56,189,248,0.15)' };
+    list.innerHTML = txs.map(tx => {
+      const plus = tx.amount > 0;
+      return `<div class="history-item">
+        <div class="history-icon" style="background:${bgs[tx.type]||'rgba(108,99,255,0.15)'}">${icons[tx.type]||'⭐'}</div>
+        <div class="history-text"><div class="history-title">${tx.title||'Операция'}</div><div class="history-date">${fmtDate(tx.created_at)}</div></div>
+        <div class="history-amount ${plus?'plus':'minus'}">${plus?'+':''}${tx.amount} ★</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ===== МОИ ЗАКАЗЫ =====
+  async function loadOrders() {
+    if (!currentUser) return;
+    const { data: orders } = await sb
+      .from('orders')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    const list = document.getElementById('orders-list');
+    if (!orders?.length) {
+      list.innerHTML = `<div class="empty-state"><span class="empty-icon">📂</span>Заказов пока нет.<br>Оформи первый — это быстро!<br><button class="orders-new-btn" onclick="showScreen('order')">➕ Новый заказ</button></div>`;
+      return;
+    }
+    const sm = {
+      pending:   { label:'На рассмотрении', cls:'pending',   step:0 },
+      working:   { label:'В работе',         cls:'working',   step:1 },
+      done:      { label:'Готово',            cls:'done',      step:2 },
+      cancelled: { label:'Отменён',           cls:'cancelled', step:-1 }
+    };
+    list.innerHTML = orders.map(o => {
+      const st = sm[o.status] || sm.pending;
+      const tl = o.status !== 'cancelled' ? `
+        <div class="order-timeline">
+          <div class="timeline-step"><div class="timeline-dot done-step">✓</div><div class="timeline-label">Принят</div></div>
+          <div class="timeline-line ${st.step>=1?'done':''}"></div>
+          <div class="timeline-step"><div class="timeline-dot ${st.step===1?'active-step':st.step>1?'done-step':''}">${st.step===1?'✏':st.step>1?'✓':'·'}</div><div class="timeline-label">В работе</div></div>
+          <div class="timeline-line ${st.step>=2?'done':''}"></div>
+          <div class="timeline-step"><div class="timeline-dot ${st.step>=2?'done-step':''}">🎓</div><div class="timeline-label">Готово</div></div>
+        </div>` : '';
+      return `<div class="order-card">
+        <div class="order-card-header">
+          <div><div class="order-card-type">${o.type||'Заказ'}</div><div class="order-card-topic">${o.topic||''}</div></div>
+          <div class="status-badge ${st.cls}"><div class="status-dot"></div>${st.label}</div>
+        </div>
+        ${tl}
+        <div class="order-card-footer">
+          <div class="order-card-date">📅 ${fmtDate(o.created_at)}</div>
+          <div class="order-card-bonus">${o.status==='done'?'+100 ★ начислено':'+100 ★ после сдачи'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ===== ОТПРАВИТЬ ЗАКАЗ =====
+  async function submitOrder() {
+    const topic = document.getElementById('order-topic').value.trim();
+    const uni   = document.getElementById('order-uni').value.trim();
+    if (!topic || !uni) { tg.showAlert('❌ Заполни тему и учебное заведение'); return; }
+    if (!currentUser)   { tg.showAlert('❌ Ошибка авторизации'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = '⏳ Отправляем...';
+
+    const typeEl = document.getElementById('order-type');
+    const { error } = await sb.from('orders').insert({
+      user_id:    currentUser.id,
+      type:       typeEl.options[typeEl.selectedIndex].text,
+      topic,
+      university: uni,
+      deadline:   document.getElementById('order-deadline').value || null,
+      extra:      document.getElementById('order-extra').value.trim() || null,
+      status:     'pending'
+    });
+
+    btn.disabled = false; btn.textContent = '📦 Отправить заказ (+100 бонусов)';
+
+    if (error) {
+      tg.showAlert('❌ Не удалось отправить заказ. Напиши нам: @StudProfy');
+      return;
+    }
+
+    tg.showAlert('✅ Заказ отправлен!\n\nМенеджер свяжется с тобой. Бонусы начислятся после подтверждения.', async () => {
+      ['order-topic','order-uni','order-deadline','order-extra'].forEach(id => document.getElementById(id).value = '');
+      await loadOrders();
+      await loadStats();
+      showScreen('history');
+      switchTab('ord');
+    });
+  }
+
+  // ===== СКИДКА =====
+  function spendDiscount() {
+    const bal = currentUser?.balance || 0;
+    if (bal < 100) { tg.showAlert('❌ Нужно минимум 100 бонусов.\nУ тебя: ' + bal + ' ★'); return; }
+    tg.showConfirm('Использовать бонусы как скидку?\n\nБаланс: ' + bal + ' ★\n\nСкажи менеджеру сколько списать при оформлении заказа.',
+      (ok) => { if (ok) { showToast('✅ Напиши @StudProfy и назови сумму!'); showScreen('order'); } });
+  }
+
+  // ===== ПОДАРОК =====
+  async function spendGift() {
+    const bal = currentUser?.balance || 0;
+    if (bal < 1000) { tg.showAlert('❌ Нужно 1000 бонусов.\nУ тебя: ' + bal + ' ★\nЕщё: ' + (1000-bal) + ' ★'); return; }
+    tg.showConfirm('🎁 Списать 1000 бонусов и получить подарок?', async (ok) => {
+      if (!ok) return;
+      const { error } = await sb.from('users').update({ balance: bal - 1000 }).eq('id', currentUser.id);
+      if (error) { tg.showAlert('❌ Ошибка. Попробуй позже.'); return; }
+      await sb.from('transactions').insert({ user_id: currentUser.id, amount: -1000, type: 'gift', title: 'Получение подарка 🎁' });
+      currentUser.balance = bal - 1000;
+      renderMain();
+      await loadHistory();
+      showToast('🎁 Заявка отправлена! Менеджер свяжется с тобой.');
+    });
+  }
+
+  // ===== ОНБОРДИНГ =====
+  function checkOnboarding() {
+    const key = `ob_${tgId}`;
+    if (!localStorage.getItem(key) && (!currentUser?.balance || currentUser.balance === 0))
+      setTimeout(() => document.getElementById('onboarding').classList.remove('hidden'), 600);
+  }
+  function closeOnboarding() {
+    document.getElementById('onboarding').classList.add('hidden');
+    try { localStorage.setItem(`ob_${tgId}`, '1'); } catch(e) {}
+  }
+
+  // ===== УТИЛИТЫ =====
+  function hideLoader() {
+    const l = document.getElementById('loader');
+    l.classList.add('hidden');
+    setTimeout(() => l.style.display = 'none', 400);
+  }
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    const nav = document.getElementById('nav-' + name);
+    if (nav) nav.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  function switchTab(tab) {
+    document.getElementById('panel-tx').style.display  = tab==='tx'  ? 'block' : 'none';
+    document.getElementById('panel-ord').style.display = tab==='ord' ? 'block' : 'none';
+    document.getElementById('tab-tx').classList.toggle('active',  tab==='tx');
+    document.getElementById('tab-ord').classList.toggle('active', tab==='ord');
+  }
+  function copyRefLink() {
+    const link = `https://t.me/${BOT_USERNAME}?start=ref_${tgId}`;
+    if (navigator.clipboard) navigator.clipboard.writeText(link).catch(()=>{});
+    showToast('✅ Ссылка скопирована!');
+    try { tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent('Привет! Закажи учебную работу в СтудПрофи по моей ссылке 🎓')); } catch(e) {}
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+  function selectPages(el, pages) {
+    selectedPages = pages;
+    document.querySelectorAll('.pages-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    updatePrice();
+  }
+  function updatePrice() {
+    const base = parseInt(document.getElementById('order-type').value) || 1000;
+    const m = selectedPages<=10?1:selectedPages<=20?1.5:selectedPages<=30?2:selectedPages<=50?2.8:4;
+    document.getElementById('price-preview-val').textContent = 'от ' + (Math.round(base*m/100)*100).toLocaleString('ru-RU') + ' ₽';
+  }
+  function fmtDate(str) {
+    if (!str) return '';
+    try { return new Date(str).toLocaleDateString('ru-RU', {day:'numeric',month:'short',year:'numeric'}); }
+    catch(e) { return str; }
+  }
+
+  updatePrice();
+  init();
+</script>
+</body>
+</html>
