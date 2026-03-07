@@ -7,7 +7,7 @@ from aiogram.types import (
 )
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
-from supabase import create_client
+from supabase import create_client, Client
 import os
 
 # ==============================
