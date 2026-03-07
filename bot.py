@@ -9,23 +9,25 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from supabase import create_client
 import os
 
-# ==============================
-# ⚙️ НАСТРОЙКИ
-# ==============================
-BOT_TOKEN    = os.getenv("BOT_TOKEN", "8771034458:AAEXVL8Y5M9BAIIP5jtovgVcO12r2FY_N0U")
-MANAGER_ID   = int(os.getenv("MANAGER_ID", "8515276800"))
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://hmtvzflvnzxhoalshwmt.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz")
-WEBAPP_URL   = os.getenv("WEBAPP_URL", "https://egorkorotchenko777-boop.github.io/studprofy/")
-# ==============================
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MANAGER_ID = int(os.getenv("MANAGER_ID", "8515276800"))
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://egorkorotchenko777-boop.github.io/studprofy/")
+
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN is not set")
+if not SUPABASE_URL:
+    raise ValueError("SUPABASE_URL is not set")
+if not SUPABASE_KEY:
+    raise ValueError("SUPABASE_KEY is not set")
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-bot = Bot(token=8771034458:AAEXVL8Y5M9BAIIP5jtovgVcO12r2FY_N0U)
-dp  = Dispatcher(storage=MemoryStorage())
-sb  = create_client(https://hmtvzflvnzxhoalshwmt.supabase.co, sb_publishable_YqbanryR_Gtvf81MirWRVA_wsIuyAiz)
-
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(storage=MemoryStorage())
+sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ───────────────────────────────────────────
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
